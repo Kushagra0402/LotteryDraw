@@ -84,20 +84,20 @@ public class LotteryService {
     //
 
     public void endDraw(){
-        Draw draw = drawRepository.findFirstByOrderByStartTimeDesc();
+        Draw draw = drawRepository.findFirstByIsEndedOrderByStartTimeDesc(false);
         List<Ticket> allTicketsInDraw= ticketRepository.findAllByDraw(draw);
         Random random=new Random();
         if(allTicketsInDraw.size()>0) {
             int winnerTicketIndex = random.nextInt(allTicketsInDraw.size());
             Ticket winningTicket = allTicketsInDraw.get(winnerTicketIndex);
             draw.setWinningTicket(winningTicket);
-            draw.setEnded(true);
-            drawRepository.save(draw);
             for (Ticket ticket : allTicketsInDraw) {
                 ticket.setIsValid(false); // Set the valid flag to false for all tickets
                 ticketRepository.save(ticket);
             }
         }
+        draw.setEnded(true);
+        drawRepository.save(draw);
     }
 
 
