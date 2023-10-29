@@ -11,6 +11,8 @@ import com.example.demo.repository.TicketRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.lang.constant.Constable;
@@ -37,19 +39,25 @@ public class LotteryService {
 
     List<Ticket> allTickets=new ArrayList<>();
 
-    List<Contestant> contestants=new ArrayList<>();
 
     //Contestants register and
     public EnterDrawResponseDTO enterDraw(String name){
 
+        Draw currentDraw = drawRepository.findFirstByIsEndedOrderByStartTimeDesc(false);
+        if(currentDraw==null){
+            throw new RuntimeException("No draws in place. First inittiate a draw");
+        }
         //Add contestant in the db
-        Contestant contestant=new Contestant();
-        contestant.setName(name);
-        contestantRepository.save(contestant);
-        contestants.add(contestant);
+        Contestant contestant=contestantRepository.findByName(name);
+
+        if(contestant==null) {
+            contestant = new Contestant();
+            contestant.setName(name);
+            contestantRepository.save(contestant);
+        }
 
         // find current ongoing draw.
-        Draw currentDraw = drawRepository.findFirstByIsEndedOrderByStartTimeDesc(false);
+
 
         //Attach ticket to contestant
         Ticket ticket=new Ticket();
@@ -64,6 +72,7 @@ public class LotteryService {
         enterDrawResponseDTO.setTicketId(ticket.getId());
         enterDrawResponseDTO.setContestantId(contestant.getId());
         enterDrawResponseDTO.setContestantName(contestant.getName());
+        enterDrawResponseDTO.setTicketSerialNumber(ticket.getSerialCode());
         return enterDrawResponseDTO;
     }
 
@@ -112,16 +121,21 @@ public class LotteryService {
         }, DRAW_INTERVAL_SECONDS * 1000);
     }
 
-    public DrawResponseDTO getWinner(){
+    public DrawResponseDTO getWinner() {
         Draw draw = drawRepository.findFirstByIsEndedOrderByStartTimeDesc(true);
-        Ticket winningTicket= draw.getWinningTicket();
-        Contestant winner=winningTicket.getContestant();
-        DrawResponseDTO drawResponseDTO=new DrawResponseDTO();
-        drawResponseDTO.setWinnerId(winner.getId());
-        drawResponseDTO.setDrawId(draw.getId());
-        drawResponseDTO.setWinnerName(winner.getName());
-        drawResponseDTO.setTicketId(winningTicket.getId());
-        drawResponseDTO.setSerialCode(winningTicket.getSerialCode());
-        return drawResponseDTO;
-    }
-}
+        Ticket winningTicket = draw.getWinningTicket();
+        if(winningTicket==null){
+            throw new RuntimeException("No one participated in the draw");
+        }
+                Contestant winner = winningTicket.getContestant();
+                DrawResponseDTO drawResponseDTO = new DrawResponseDTO();
+                drawResponseDTO.setWinnerId(winner.getId());
+                drawResponseDTO.setDrawId(draw.getId());
+                drawResponseDTO.setWinnerName(winner.getName());
+                drawResponseDTO.setTicketId(winningTicket.getId());
+                drawResponseDTO.setSerialCode(winningTicket.getSerialCode());
+                return drawResponseDTO;
+
+
+
+}}
